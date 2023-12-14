@@ -1,15 +1,20 @@
 module Main (main) where
+
 import Data.List (transpose)
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  print $ score $ tiltNorth $ lines input
+  let scores = map score $ iterate tiltCycle $ lines input
+  let total = 1000000000
+  let pattern = repeatingPattern $ take 100 $ drop 1000 scores
+  let patternSize = length pattern
+  print $ pattern !! ((total - 1000) `mod` patternSize)
 
-tiltNorth :: [String] -> [String]
-tiltNorth xs = turnLeft $ tiltLine <$> turnRight xs
+tiltCycle :: [String] -> [String]
+tiltCycle xs = turnRightAndTilt $ turnRightAndTilt $ turnRightAndTilt $ turnRightAndTilt xs
   where
-    turnLeft = reverse . transpose
+    turnRightAndTilt ys = tiltLine <$> turnRight ys
     turnRight = transpose . reverse
 
 tiltLine :: String -> String
@@ -26,3 +31,8 @@ score xs = sum $ zipWith scoreLine [1..] (reverse xs)
 
 scoreLine :: Int -> String -> Int
 scoreLine v xs = length (filter (=='O') xs) * v
+
+repeatingPattern :: Eq a => [a] -> [a]
+repeatingPattern xs = head $ filter isRepeating $ map (`take` xs) [1..]
+  where
+    isRepeating ys = and $ zipWith (==) xs (cycle ys)
