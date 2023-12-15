@@ -23,7 +23,8 @@ parseInput :: String -> [Lens]
 parseInput input = parseStep <$> split "," input
   where
     parseStep :: String -> Lens
-    parseStep xs = (takeWhile isAlpha xs, parseCmd (dropWhile isAlpha xs))
+    parseStep xs = case span isAlpha xs of
+      (name, rest) -> (name, parseCmd rest)
 
     parseCmd :: String -> Int
     parseCmd "-" = 0
