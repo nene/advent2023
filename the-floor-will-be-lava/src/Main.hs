@@ -6,10 +6,7 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let mirrorPlan = parseInput input
-  let beamPlan = emptyBeamPlan mirrorPlan
-  let lastBeamPlan = last $ propagate (0,0) R mirrorPlan beamPlan
-  putStrLn $ showBeamPlan lastBeamPlan
-  print $ energizedTileCount lastBeamPlan
+  print $ foldl max 0 $ (`beamEnergy` mirrorPlan) <$> possibleDirections mirrorPlan
 
 type MirrorPlan = Vector (Vector Char)
 
@@ -38,6 +35,20 @@ showBeamPlan plan = unlines (map showDirList <$> toListFrom2DVector plan)
     showDirList [L] = '<'
     showDirList _ = '#'
 
+possibleDirections :: MirrorPlan -> [(Coord, Dir)]
+possibleDirections plan = fromLeft ++ fromRight ++ fromTop ++ fromBottom
+  where
+    fromLeft = [((row, 0), R) | row <- [0 .. lastRow]]
+    fromRight = [((row, lastCol), L) | row <- [0 .. lastRow]]
+    fromTop = [((0, col), D) | col <- [0 .. lastCol]]
+    fromBottom = [((lastRow, col), U) | col <- [0 .. lastCol]]
+    lastRow = rowCount plan - 1
+    lastCol = colCount plan - 1
+
+beamEnergy :: (Coord, Dir) -> MirrorPlan -> Int
+beamEnergy (coord, dir) mirrorPlan =
+  energizedTileCount $ last $ propagate coord dir mirrorPlan (emptyBeamPlan mirrorPlan)
+
 energizedTileCount :: BeamPlan -> Int
 energizedTileCount rows = sum $ sum . map energyNr <$> toListFrom2DVector rows
   where
@@ -49,6 +60,12 @@ at :: Vector (Vector a) -> Coord -> Maybe a
 at rows (rowIndex, colIndex) = do
   row <- rows !? rowIndex
   row !? colIndex
+
+colCount :: Vector (Vector a) -> Int
+colCount rows = maybe 0 length (rows !? 0)
+
+rowCount :: Vector (Vector a) -> Int
+rowCount = length
 
 -- Set value at coordinate in 2D vector
 setAt :: Coord -> a -> Vector (Vector a) -> Vector (Vector a)
