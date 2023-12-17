@@ -1,4 +1,4 @@
-module Vector2D (Vector2D, Coord2D, fromList, toList, at, setAt, updateAt, size) where
+module Vector2D (Vector2D, Coord2D, fromList, toList, at, setAt, updateAt, size, Vector2D.map) where
 
 import Data.Vector (Vector, (!?), (//))
 import qualified Data.Vector as Vector
@@ -38,3 +38,7 @@ updateAt coord fn vector = case vector `at` coord of
 -- (height, width) of a 2D vector
 size :: Vector2D a -> Coord2D
 size rows = (length rows, maybe 0 length (rows !? 0))
+
+-- a map over 2D vector
+map :: (a -> b) -> Vector2D a -> Vector2D b
+map f = Vector.map (\row -> Vector.map f row)
