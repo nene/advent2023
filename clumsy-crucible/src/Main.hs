@@ -5,16 +5,12 @@ import qualified Vector2D
 import Data.Char (digitToInt, intToDigit)
 import Data.Maybe (fromMaybe)
 import Data.List (sortOn)
+import Control.Concurrent (threadDelay)
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  stepThrough (parseInput input) [1..10]
-  -- let solutions = findPath (0, 0) vector
-  -- let plottedSolutions = (\(_, p) -> drawPathLines p vector) <$> solutions
-  -- putStrLn $ unlines $ foldl1 plotSideways plottedSolutions
-  -- putStrLn $ unlines $ (\(cst, p) -> drawPath p vector ++ show cst ++ "\n") <$> solutions
-  -- print $ length solutions
+  stepThrough (parseInput input) [1..1000]
 
 stepThrough :: Vector2D Int -> [Int] -> IO ()
 stepThrough _ [] = do
@@ -24,6 +20,7 @@ stepThrough vector (step:steps) = do
   let solutions = findPath (0, 0) vector step
   let plottedSolutions = (\(_, p) -> drawPathLines p vector) <$> take 10 solutions
   putStrLn $ unlines $ foldl1 plotSideways plottedSolutions
+  threadDelay 100000
   stepThrough vector steps
 
 parseInput :: String -> Vector2D Int
