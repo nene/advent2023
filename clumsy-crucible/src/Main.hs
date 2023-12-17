@@ -27,20 +27,13 @@ findPath :: Coord2D -> Vector2D Int -> (Int, [Coord2D])
 findPath startCoord vector = findPath' [(0, [startCoord])] [] 10000
   where
     goal = goalCoord vector
-    heur = heuristic goal
 
     findPath' :: [(Int, [Coord2D])] -> [Coord2D] -> Int -> (Int, [Coord2D])
     findPath' [] _ _ = (0, [])
     findPath' ((costSoFar, path):paths) visited n
       | head path == goal = (costSoFar, path)
       | n == 0 = (costSoFar, path)
-      | otherwise = findPath' (sortOn estimPathCost $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited] ++ paths) (head path : visited) (n-1)
-
-    estimPathCost (pathCost, path) = pathCost + heur (head path)
-
--- estimates cheapest path from a coordinate to goal coordinate
-heuristic :: Coord2D -> Coord2D -> Int
-heuristic (goalX, goalY) (x, y) = 1 * (goalX - x + goalY - y)
+      | otherwise = findPath' (sortOn fst $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited] ++ paths) (head path : visited) (n-1)
 
 -- cost of traveling through a coordinate
 cost :: Vector2D Int -> Coord2D -> Int
