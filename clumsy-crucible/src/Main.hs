@@ -10,9 +10,9 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let vector = parseInput input
-  let (cst, path) = head $ findPath (0, 0) vector
-  putStrLn $ drawPath path vector
-  print cst
+  let solutions = findPath (0, 0) vector
+  putStrLn $ unlines $ (\(cst, p) -> drawPath p vector ++ show cst ++ "\n") <$> solutions
+  print $ length solutions
 
 parseInput :: String -> Vector2D Int
 parseInput str = Vector2D.fromList $ map digitToInt <$> lines str
@@ -24,18 +24,18 @@ drawPath coords vector = unlines $ Vector2D.toList $ Vector2D.map toChar $ foldl
     toChar _ = '.'
 
 findPath :: Coord2D -> Vector2D Int -> [(Int, [Coord2D])]
-findPath startCoord vector = findPath' [(0, [startCoord])] [] 20000
+findPath startCoord vector = findPath' [(0, [startCoord])] 6
   where
     goal = goalCoord vector
 
-    findPath' :: [(Int, [Coord2D])] -> [Coord2D] -> Int -> [(Int, [Coord2D])]
-    findPath' [] _ _ = [(0, [])]
-    findPath' ((costSoFar, path):paths) visited n
-      | head path == goal = (n, path):paths
+    findPath' :: [(Int, [Coord2D])] -> Int -> [(Int, [Coord2D])]
+    findPath' [] _ = [(0, [])]
+    findPath' ((costSoFar, path):paths) n
+      | head path == goal = (costSoFar, path):paths
       | n == 0 = (costSoFar, path):paths
-      | otherwise = findPath' (sortOn fst $ nextPaths ++ paths) (head path : visited) (n-1)
+      | otherwise = findPath' (sortOn fst $ nextPaths ++ paths) (n-1)
         where
-          nextPaths = [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited]
+          nextPaths = [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector]
 
 -- cost of traveling through a coordinate
 cost :: Vector2D Int -> Coord2D -> Int
@@ -45,13 +45,13 @@ goalCoord :: Vector2D a -> Coord2D
 goalCoord v = case Vector2D.size v of
   (x, y) -> (x-1, y-1)
 
-nextCoords :: [Coord2D] -> Vector2D a -> [Coord2D] -> [Coord2D]
-nextCoords [] _ _ = []
-nextCoords ((x,y):coords) vector visited = filter isValidCoord [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+nextCoords :: [Coord2D] -> Vector2D a -> [Coord2D]
+nextCoords [] _ = []
+nextCoords ((x,y):coords) vector = filter isValidCoord [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
   where
     isValidCoord coord = case vector `at` coord of
       Nothing -> False -- can't step outside of the map
-      Just _ -> coord `notElem` visited && -- can't go to already visited coordinate
+      Just _ -> coord `notElem` coords && -- can't go to already visited coordinate
                 not (has5Straight (coord:(x,y):coords)) -- can't do > 3 steps in the same direction
 
 has5Straight :: [Coord2D] -> Bool
