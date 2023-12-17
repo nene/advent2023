@@ -10,7 +10,7 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let vector = parseInput input
-  let (cst, path) = findPath (0, 0) vector
+  let (cst, path) = head $ findPath (0, 0) vector
   putStrLn $ drawPath path vector
   print cst
 
@@ -23,17 +23,19 @@ drawPath coords vector = unlines $ Vector2D.toList $ Vector2D.map toChar $ foldl
     toChar 0 = '#'
     toChar _ = '.'
 
-findPath :: Coord2D -> Vector2D Int -> (Int, [Coord2D])
-findPath startCoord vector = findPath' [(0, [startCoord])] [] 10000
+findPath :: Coord2D -> Vector2D Int -> [(Int, [Coord2D])]
+findPath startCoord vector = findPath' [(0, [startCoord])] [] 20000
   where
     goal = goalCoord vector
 
-    findPath' :: [(Int, [Coord2D])] -> [Coord2D] -> Int -> (Int, [Coord2D])
-    findPath' [] _ _ = (0, [])
+    findPath' :: [(Int, [Coord2D])] -> [Coord2D] -> Int -> [(Int, [Coord2D])]
+    findPath' [] _ _ = [(0, [])]
     findPath' ((costSoFar, path):paths) visited n
-      | head path == goal = (costSoFar, path)
-      | n == 0 = (costSoFar, path)
-      | otherwise = findPath' (sortOn fst $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited] ++ paths) (head path : visited) (n-1)
+      | head path == goal = (n, path):paths
+      | n == 0 = (costSoFar, path):paths
+      | otherwise = findPath' (sortOn fst $ nextPaths ++ paths) (head path : visited) (n-1)
+        where
+          nextPaths = [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited]
 
 -- cost of traveling through a coordinate
 cost :: Vector2D Int -> Coord2D -> Int
