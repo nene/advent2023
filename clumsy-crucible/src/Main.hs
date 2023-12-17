@@ -24,17 +24,17 @@ drawPath coords vector = unlines $ Vector2D.toList $ Vector2D.map toChar $ foldl
     toChar _ = '.'
 
 findPath :: Coord2D -> Vector2D Int -> (Int, [Coord2D])
-findPath startCoord vector = findPath' [(0, [startCoord])] 10000
+findPath startCoord vector = findPath' [(0, [startCoord])] [] 10000
   where
     goal = goalCoord vector
     heur = heuristic goal
 
-    findPath' :: [(Int, [Coord2D])] -> Int -> (Int, [Coord2D])
-    findPath' [] _ = (0, [])
-    findPath' ((costSoFar, path):paths) n
+    findPath' :: [(Int, [Coord2D])] -> [Coord2D] -> Int -> (Int, [Coord2D])
+    findPath' [] _ _ = (0, [])
+    findPath' ((costSoFar, path):paths) visited n
       | head path == goal = (costSoFar, path)
       | n == 0 = (costSoFar, path)
-      | otherwise = findPath' (sortOn estimPathCost $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector] ++ paths) (n-1)
+      | otherwise = findPath' (sortOn estimPathCost $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector visited] ++ paths) (head path : visited) (n-1)
 
     estimPathCost (pathCost, path) = pathCost + heur (head path)
 
@@ -50,13 +50,13 @@ goalCoord :: Vector2D a -> Coord2D
 goalCoord v = case Vector2D.size v of
   (x, y) -> (x-1, y-1)
 
-nextCoords :: [Coord2D] -> Vector2D a -> [Coord2D]
-nextCoords [] _ = []
-nextCoords ((x,y):coords) vector = filter isValidCoord [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+nextCoords :: [Coord2D] -> Vector2D a -> [Coord2D] -> [Coord2D]
+nextCoords [] _ _ = []
+nextCoords ((x,y):coords) vector visited = filter isValidCoord [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
   where
     isValidCoord coord = case vector `at` coord of
       Nothing -> False -- can't step outside of the map
-      Just _ -> coord `notElem` coords && -- can't go to already visited coordinate
+      Just _ -> coord `notElem` visited && -- can't go to already visited coordinate
                 not (has5Straight (coord:(x,y):coords)) -- can't do > 3 steps in the same direction
 
 has5Straight :: [Coord2D] -> Bool
