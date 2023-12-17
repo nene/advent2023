@@ -10,7 +10,9 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let vector = parseInput input
-  putStrLn $ drawPath (findPath (0, 0) vector) vector
+  let (cst, path) = findPath (0, 0) vector
+  putStrLn $ drawPath path vector
+  print cst
 
 parseInput :: String -> Vector2D Int
 parseInput str = Vector2D.fromList $ map digitToInt <$> lines str
@@ -21,24 +23,24 @@ drawPath coords vector = unlines $ Vector2D.toList $ Vector2D.map toChar $ foldl
     toChar 0 = '#'
     toChar _ = '.'
 
-findPath :: Coord2D -> Vector2D Int -> [Coord2D]
-findPath startCoord vector = findPath' [(0, [startCoord])] 1000
+findPath :: Coord2D -> Vector2D Int -> (Int, [Coord2D])
+findPath startCoord vector = findPath' [(0, [startCoord])] 10000
   where
     goal = goalCoord vector
     heur = heuristic goal
 
-    findPath' :: [(Int, [Coord2D])] -> Int -> [Coord2D]
-    findPath' [] _ = []
+    findPath' :: [(Int, [Coord2D])] -> Int -> (Int, [Coord2D])
+    findPath' [] _ = (0, [])
     findPath' ((costSoFar, path):paths) n
-      | head path == goal = path
-      | n == 0 = path
+      | head path == goal = (costSoFar, path)
+      | n == 0 = (costSoFar, path)
       | otherwise = findPath' (sortOn estimPathCost $ [(cost vector c + costSoFar, c:path) | c <- nextCoords path vector] ++ paths) (n-1)
 
     estimPathCost (pathCost, path) = pathCost + heur (head path)
 
 -- estimates cheapest path from a coordinate to goal coordinate
 heuristic :: Coord2D -> Coord2D -> Int
-heuristic (goalX, goalY) (x, y) = 9 * (goalX - x + goalY - y)
+heuristic (goalX, goalY) (x, y) = 1 * (goalX - x + goalY - y)
 
 -- cost of traveling through a coordinate
 cost :: Vector2D Int -> Coord2D -> Int
@@ -54,4 +56,21 @@ nextCoords ((x,y):coords) vector = filter isValidCoord [(x+1, y), (x-1, y), (x, 
   where
     isValidCoord coord = case vector `at` coord of
       Nothing -> False -- can't step outside of the map
-      Just _ -> coord `notElem` coords -- can't go to already visited coordinate
+      Just _ -> coord `notElem` coords && -- can't go to already visited coordinate
+                not (has5Straight (coord:(x,y):coords)) -- can't do > 3 steps in the same direction
+
+has5Straight :: [Coord2D] -> Bool
+has5Straight coords
+  | length coords < 5 = False
+  | otherwise = isStraight $ take 4 coords
+
+isStraight :: [Coord2D] -> Bool
+isStraight (a:b:coords) = all (==firstDir) $ zipWith direction (b:coords) coords
+  where firstDir = direction a b
+isStraight _ = True
+
+data Direction = Horiz | Vert deriving Eq
+
+direction :: Coord2D -> Coord2D -> Direction
+direction (x,_) (x',_) = if x == x' then Horiz else Vert
+
