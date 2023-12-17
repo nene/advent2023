@@ -1,30 +1,47 @@
 module Main (main) where
 
-import Vector2D (Vector2D, Coord2D, at, setAt)
+import Vector2D (Vector2D, Coord2D, at, updateAt)
 import qualified Vector2D
-import Data.Char (digitToInt)
+import Data.Char (digitToInt, intToDigit)
 import Data.Maybe (fromMaybe)
 import Data.List (sortOn)
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  let vector = parseInput input
-  let solutions = findPath (0, 0) vector
-  putStrLn $ unlines $ (\(cst, p) -> drawPath p vector ++ show cst ++ "\n") <$> solutions
-  print $ length solutions
+  stepThrough (parseInput input) [1..10]
+  -- let solutions = findPath (0, 0) vector
+  -- let plottedSolutions = (\(_, p) -> drawPathLines p vector) <$> solutions
+  -- putStrLn $ unlines $ foldl1 plotSideways plottedSolutions
+  -- putStrLn $ unlines $ (\(cst, p) -> drawPath p vector ++ show cst ++ "\n") <$> solutions
+  -- print $ length solutions
+
+stepThrough :: Vector2D Int -> [Int] -> IO ()
+stepThrough _ [] = do
+  putStrLn "Done."
+stepThrough vector (step:steps) = do
+  putStrLn $ "Step: " ++ show step
+  let solutions = findPath (0, 0) vector step
+  let plottedSolutions = (\(_, p) -> drawPathLines p vector) <$> take 10 solutions
+  putStrLn $ unlines $ foldl1 plotSideways plottedSolutions
+  stepThrough vector steps
 
 parseInput :: String -> Vector2D Int
 parseInput str = Vector2D.fromList $ map digitToInt <$> lines str
 
 drawPath :: [Coord2D] -> Vector2D Int -> String
-drawPath coords vector = unlines $ Vector2D.toList $ Vector2D.map toChar $ foldl (\vect c -> setAt c 0 vect) vector coords
-  where
-    toChar 0 = '#'
-    toChar _ = '.'
+drawPath coords vector = unlines $ drawPathLines coords vector
 
-findPath :: Coord2D -> Vector2D Int -> [(Int, [Coord2D])]
-findPath startCoord vector = findPath' [(0, [startCoord])] 6
+drawPathLines :: [Coord2D] -> Vector2D Int -> [String]
+drawPathLines coords vector = Vector2D.toList $ Vector2D.map toChar $ foldl (\vect c -> updateAt c (+10) vect) vector coords
+  where
+    toChar x = if x > 10 then intToDigit (x-10) else '.'
+
+plotSideways :: [String] -> [String] -> [String]
+plotSideways = zipWith (\a b -> a ++ " " ++ b)
+
+findPath :: Coord2D -> Vector2D Int -> Int -> [(Int, [Coord2D])]
+findPath startCoord vector = findPath' [(0, [startCoord])]
   where
     goal = goalCoord vector
 
