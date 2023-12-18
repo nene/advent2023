@@ -8,7 +8,9 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let path = toCanonicalCoords $ createPath $ parseInput input
-  putStrLn $ showPath $ drawPath path
+  let filledVect = floodFill (78,1) '#' $ drawPath path
+  putStrLn $ showVector2D filledVect
+  print $ countElem '#' $ unlines $ Vector2D.toList filledVect
 
 data Dir = L | R | U | D deriving (Eq, Show)
 
@@ -59,5 +61,19 @@ drawPath coords = foldl (\vec c -> Vector2D.setAt c '#' vec) emptyVector coords
   where
     emptyVector = Vector2D.fill (maxX coords + 1, maxY coords + 1) '.'
 
-showPath :: Vector2D Char -> String
-showPath vector = unlines $ transpose $ Vector2D.toList vector
+showVector2D :: Vector2D Char -> String
+showVector2D vector = unlines $ transpose $ Vector2D.toList vector
+
+floodFill :: Eq a => Coord2D -> a -> Vector2D a -> Vector2D a
+floodFill (x,y) value vector = case vector `Vector2D.at` (x,y) of
+  Nothing -> vector
+  Just v ->
+    if v == value
+    then vector
+    else foldl (\vec c -> floodFill c value vec) filledVect surroundingCoords
+      where
+        filledVect = Vector2D.setAt (x,y) value vector
+        surroundingCoords = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
+
+countElem :: Eq a => a -> [a] -> Int
+countElem v xs = foldl (\cnt e -> if e == v then cnt+1 else cnt) 0 xs
