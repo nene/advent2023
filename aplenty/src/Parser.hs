@@ -1,11 +1,21 @@
-module Parser (parseInput) where
+module Parser (
+  parseInput,
+  WorkflowMap,
+  Part (Part),
+  Rule (Conditional, Unconditional),
+  PartType (X, M, A, S),
+  Action (Goto, Accept, Reject),
+  Op (OpLT, OpGT)
+) where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.List.Utils (split)
 import Text.ParserCombinators.Parsec
 
-parseInput :: String -> (Map String [Rule], [Part])
+type WorkflowMap = Map String [Rule]
+
+parseInput :: String -> (WorkflowMap, [Part])
 parseInput input = case split "\n\n" input of
   [a,b] -> (Map.fromList (parseWorkflow <$> lines a), parsePart <$> lines b)
   _ -> error "Invalid input"
@@ -42,7 +52,7 @@ data Op = OpGT | OpLT deriving (Show)
 parseWorkflow :: String -> (String, [Rule])
 parseWorkflow input = case parse workflow "(unknown)" input of
   Right p -> p
-  Left _ -> error "Failed to parse workflow"
+  Left r -> error ("Failed to parse workflow" ++ show r)
 
 -- px{a<2006:qkq,m>2090:A,rfg}
 workflow :: GenParser Char st (String, [Rule])
@@ -54,7 +64,7 @@ workflow = do
   return (name, rules)
 
 rule :: GenParser Char st Rule
-rule = conditionalRule <|> unconditionalRule
+rule = choice [try conditionalRule, unconditionalRule]
 
 -- a<2006:qkq
 conditionalRule :: GenParser Char st Rule
