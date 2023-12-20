@@ -8,7 +8,7 @@ main = do
   input <- readFile "input.txt"
   let moduleMap = parseInput input
   print moduleMap
-  putStrLn $ unlines $ showPulseSending <$> reverse (pushButton moduleMap)
+  putStrLn $ unlines $ showSignal <$> reverse (pushButton moduleMap)
 
 type ModuleMap = Map String Module
 
@@ -20,6 +20,8 @@ data Module =
 data State = On | Off deriving (Show, Eq)
 
 data Pulse = Low | High deriving (Show, Eq)
+
+type Signal = (String, Pulse, String)
 
 type RawModule = (Char, String, [String])
 
@@ -47,18 +49,18 @@ buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
 
     extractName (_, name, _) = name
 
-showPulseSending :: (String, Pulse, String) -> String
-showPulseSending (from, p, to) = from ++ " -" ++ show p ++ "-> " ++ to
+showSignal :: Signal -> String
+showSignal (from, p, to) = from ++ " -" ++ show p ++ "-> " ++ to
 
-pushButton :: Map String Module -> [(String, Pulse, String)]
+pushButton :: Map String Module -> [Signal]
 pushButton moduleMap = sendSignals moduleMap [("button", Low, "broadcaster")] []
 
-sendSignals :: ModuleMap -> [(String, Pulse, String)] -> [(String, Pulse, String)] -> [(String, Pulse, String)]
+sendSignals :: ModuleMap -> [Signal] -> [Signal] -> [Signal]
 sendSignals _moduleMap [] processedPulses = processedPulses
 sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case process (moduleMap ! to) (from, pulse, to) of
   (newModule, newPulses) -> sendSignals (Map.insert to newModule moduleMap) (pulses ++ newPulses) ((from, pulse, to):processedPulses)
 
-process :: Module -> (String, Pulse, String) -> (Module, [(String, Pulse, String)])
+process :: Module -> Signal -> (Module, [Signal])
 -- When broadcast module receives a pulse, it sends the same pulse to all of its destination modules.
 process m@(Broadcast ds) (_, inPulse, to) = (m, [(to, inPulse, d) | d <- ds])
 -- If a flip-flop module receives a high pulse, it is ignored and nothing happens.
