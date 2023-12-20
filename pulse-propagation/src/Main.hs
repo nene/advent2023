@@ -8,7 +8,10 @@ main = do
   input <- readFile "input.txt"
   let moduleMap = parseInput input
   print moduleMap
-  putStrLn $ unlines $ showSignal <$> reverse (pushButton moduleMap)
+  let (newModuleMap, signals) = pushButton moduleMap
+  putStrLn $ unlines $ showSignal <$> reverse signals
+  print newModuleMap
+  print $ pushButtonUntilCycleComplete moduleMap
 
 type ModuleMap = Map String Module
 
@@ -52,11 +55,25 @@ buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
 showSignal :: Signal -> String
 showSignal (from, p, to) = from ++ " -" ++ show p ++ "-> " ++ to
 
-pushButton :: Map String Module -> [Signal]
+pushButtonUntilCycleComplete :: ModuleMap -> (Int, Int, Int)
+pushButtonUntilCycleComplete moduleMap = (pushCount, highCount, lowCount)
+  where
+    pushCount = length totalPushes - 1
+    highCount = length $ filter (==High) pulses
+    lowCount = length $ filter (==Low) pulses
+    pulses = pulseFromSignal <$> snd (last totalPushes)
+    pulseFromSignal (_, p, _) = p
+    totalPushes = take (length incompletePushes + 2) iteratePushButton
+    incompletePushes = takeWhile (not . all isStartState . fst) (drop 1 iteratePushButton)
+    iteratePushButton = iterate repeatPushButton (moduleMap, [])
+    repeatPushButton (modMap, signals) = case pushButton modMap of
+      (newModMap, newSignals) -> (newModMap, newSignals ++ signals)
+
+pushButton :: ModuleMap -> (ModuleMap, [Signal])
 pushButton moduleMap = sendSignals moduleMap [("button", Low, "broadcaster")] []
 
-sendSignals :: ModuleMap -> [Signal] -> [Signal] -> [Signal]
-sendSignals _moduleMap [] processedPulses = processedPulses
+sendSignals :: ModuleMap -> [Signal] -> [Signal] -> (ModuleMap, [Signal])
+sendSignals moduleMap [] processedPulses = (moduleMap, processedPulses)
 sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case process (moduleMap ! to) (from, pulse, to) of
   (newModule, newPulses) -> sendSignals (Map.insert to newModule moduleMap) (pulses ++ newPulses) ((from, pulse, to):processedPulses)
 
@@ -77,3 +94,9 @@ process (Conjunction inputs ds) (from, inPulse, to) = (Conjunction updatedInputs
   where
     updatedInputs = (\(name, p) -> (name, if name == from then inPulse else p)) <$> inputs
     outPulse = if all ((==High) . snd) updatedInputs then Low else High
+
+isStartState :: Module -> Bool
+isStartState (Broadcast _) = True
+isStartState (FlipFlop Off _) = True
+isStartState (FlipFlop On _) = False
+isStartState (Conjunction inputs _) = all ((==Low) . snd) inputs
