@@ -8,7 +8,7 @@ main = do
   input <- readFile "input.txt"
   let moduleMap = parseInput input
   print moduleMap
-  print $ process (moduleMap ! "broadcaster") ("button", Low, "a")
+  putStrLn $ unlines $ showPulseSending <$> reverse (pushButton moduleMap)
 
 type ModuleMap = Map String Module
 
@@ -47,11 +47,16 @@ buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
 
     extractName (_, name, _) = name
 
+showPulseSending :: (String, Pulse, String) -> String
+showPulseSending (from, p, to) = from ++ " -" ++ show p ++ "-> " ++ to
 
+pushButton :: Map String Module -> [(String, Pulse, String)]
+pushButton moduleMap = sendSignals moduleMap [("button", Low, "broadcaster")] []
 
--- sendPulses :: [(String, Pulse, String)] -> ModuleMap -> [Pulse]
--- sendPulses ((from, p, to):pulses) moduleMap = process (moduleMap ! to) (from, p, to)
-
+sendSignals :: ModuleMap -> [(String, Pulse, String)] -> [(String, Pulse, String)] -> [(String, Pulse, String)]
+sendSignals _moduleMap [] processedPulses = processedPulses
+sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case process (moduleMap ! to) (from, pulse, to) of
+  (newModule, newPulses) -> sendSignals (Map.insert to newModule moduleMap) (pulses ++ newPulses) ((from, pulse, to):processedPulses)
 
 process :: Module -> (String, Pulse, String) -> (Module, [(String, Pulse, String)])
 -- When broadcast module receives a pulse, it sends the same pulse to all of its destination modules.
@@ -69,4 +74,4 @@ process (FlipFlop On ds) (_, Low, to) = (FlipFlop Off ds, [(to, Low, d) | d <- d
 process (Conjunction inputs ds) (from, inPulse, to) = (Conjunction updatedInputs ds, [(to, outPulse, d) | d <- ds])
   where
     updatedInputs = (\(name, p) -> (name, if name == from then inPulse else p)) <$> inputs
-    outPulse = if all ((==High) . snd) inputs then Low else High
+    outPulse = if all ((==High) . snd) updatedInputs then Low else High
