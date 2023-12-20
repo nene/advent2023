@@ -1,6 +1,6 @@
 module Main (main) where
 import Data.List.Utils (split)
-import Data.Map.Strict (Map, (!))
+import Data.Map.Strict (Map, (!?))
 import qualified Data.Map.Strict as Map
 
 main :: IO ()
@@ -11,7 +11,8 @@ main = do
   let (newModuleMap, signals) = pushButton moduleMap
   putStrLn $ unlines $ showSignal <$> reverse signals
   print newModuleMap
-  print $ pushButtonUntilCycleComplete moduleMap
+  let (_, high, low) = pushButtonUntilCycleComplete moduleMap
+  print $ high * low
 
 type ModuleMap = Map String Module
 
@@ -65,7 +66,7 @@ pushButtonUntilCycleComplete moduleMap = (pushCount, highCount, lowCount)
     pulseFromSignal (_, p, _) = p
     totalPushes = take (length incompletePushes + 2) iteratePushButton
     incompletePushes = takeWhile (not . all isStartState . fst) (drop 1 iteratePushButton)
-    iteratePushButton = iterate repeatPushButton (moduleMap, [])
+    iteratePushButton = take 1001 $ iterate repeatPushButton (moduleMap, [])
     repeatPushButton (modMap, signals) = case pushButton modMap of
       (newModMap, newSignals) -> (newModMap, newSignals ++ signals)
 
@@ -74,8 +75,10 @@ pushButton moduleMap = sendSignals moduleMap [("button", Low, "broadcaster")] []
 
 sendSignals :: ModuleMap -> [Signal] -> [Signal] -> (ModuleMap, [Signal])
 sendSignals moduleMap [] processedPulses = (moduleMap, processedPulses)
-sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case process (moduleMap ! to) (from, pulse, to) of
-  (newModule, newPulses) -> sendSignals (Map.insert to newModule moduleMap) (pulses ++ newPulses) ((from, pulse, to):processedPulses)
+sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case moduleMap !? to of
+  Just modl -> case process modl (from, pulse, to) of
+    (newModule, newPulses) -> sendSignals (Map.insert to newModule moduleMap) (pulses ++ newPulses) ((from, pulse, to):processedPulses)
+  Nothing -> sendSignals moduleMap pulses ((from, pulse, to):processedPulses)
 
 process :: Module -> Signal -> (Module, [Signal])
 -- When broadcast module receives a pulse, it sends the same pulse to all of its destination modules.
