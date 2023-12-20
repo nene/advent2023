@@ -11,7 +11,10 @@ main = do
   let (newModuleMap, signals) = pushButton moduleMap
   putStrLn $ unlines $ showSignal <$> reverse signals
   print newModuleMap
-  let (_, high, low) = pushButtonUntilCycleComplete moduleMap
+  print $ outputCount newModuleMap
+  let (cnt, high, low, out) = pushButtonUntilCycleComplete moduleMap
+  print out
+  print cnt
   print $ high * low
 
 type ModuleMap = Map String Module
@@ -19,7 +22,8 @@ type ModuleMap = Map String Module
 data Module =
     Broadcast [String]
   | FlipFlop State [String]
-  | Conjunction [(String, Pulse)] [String] deriving (Show)
+  | Conjunction [(String, Pulse)] [String]
+  | Output Int deriving (Show)
 
 data State = On | Off deriving (Show, Eq)
 
@@ -41,7 +45,7 @@ parseToRawModules input = parseModule <$> lines input
       _ -> error "Invalid module definition"
 
 buildModuleMap :: [RawModule] -> ModuleMap
-buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
+buildModuleMap rawModules = Map.fromList $ ("rx", Output 0) : (nameModulePair <$> rawModules)
   where
     nameModulePair ('b', name, ds) = (name, Broadcast ds)
     nameModulePair ('%', name, ds) = (name, FlipFlop Off ds)
@@ -56,17 +60,18 @@ buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
 showSignal :: Signal -> String
 showSignal (from, p, to) = from ++ " -" ++ show p ++ "-> " ++ to
 
-pushButtonUntilCycleComplete :: ModuleMap -> (Int, Int, Int)
-pushButtonUntilCycleComplete moduleMap = (pushCount, highCount, lowCount)
+pushButtonUntilCycleComplete :: ModuleMap -> (Int, Int, Int, Int)
+pushButtonUntilCycleComplete moduleMap = (pushCount, highCount, lowCount, outCount)
   where
+    outCount = outputCount $ fst $ last totalPushes
     pushCount = length totalPushes - 1
     highCount = length $ filter (==High) pulses
     lowCount = length $ filter (==Low) pulses
     pulses = pulseFromSignal <$> snd (last totalPushes)
     pulseFromSignal (_, p, _) = p
     totalPushes = take (length incompletePushes + 2) iteratePushButton
-    incompletePushes = takeWhile (not . all isStartState . fst) (drop 1 iteratePushButton)
-    iteratePushButton = take 1001 $ iterate repeatPushButton (moduleMap, [])
+    incompletePushes = takeWhile ((==0) . outputCount . fst) (drop 1 iteratePushButton)
+    iteratePushButton = take 100001 $ iterate repeatPushButton (moduleMap, [])
     repeatPushButton (modMap, signals) = case pushButton modMap of
       (newModMap, newSignals) -> (newModMap, newSignals ++ signals)
 
@@ -83,6 +88,9 @@ sendSignals moduleMap ((from, pulse, to):pulses) processedPulses = case moduleMa
 process :: Module -> Signal -> (Module, [Signal])
 -- When broadcast module receives a pulse, it sends the same pulse to all of its destination modules.
 process m@(Broadcast ds) (_, inPulse, to) = (m, [(to, inPulse, d) | d <- ds])
+-- special output module that just counts low input pulses
+process (Output n) (_, Low, _) = (Output (n+1), [])
+process (Output n) (_, High, _) = (Output n, [])
 -- If a flip-flop module receives a high pulse, it is ignored and nothing happens.
 process m@(FlipFlop _ _) (_, High, _) = (m, [])
 -- if a flip-flop module receives a low pulse, it flips between on and off.
@@ -99,7 +107,14 @@ process (Conjunction inputs ds) (from, inPulse, to) = (Conjunction updatedInputs
     outPulse = if all ((==High) . snd) updatedInputs then Low else High
 
 isStartState :: Module -> Bool
+isStartState (Output 0) = True
+isStartState (Output _) = False
 isStartState (Broadcast _) = True
 isStartState (FlipFlop Off _) = True
 isStartState (FlipFlop On _) = False
 isStartState (Conjunction inputs _) = all ((==Low) . snd) inputs
+
+outputCount :: ModuleMap -> Int
+outputCount moduleMap = case moduleMap !? "rx" of
+  Just (Output n) -> n
+  _ -> error "No output module found"
