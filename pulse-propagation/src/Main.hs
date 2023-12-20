@@ -1,39 +1,52 @@
 module Main (main) where
 import Data.List.Utils (split)
 import Data.Foldable (find)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  let (broadcaster, modules) = extractBroadcaster $ parseInput input
-  print broadcaster
+  let (broadcastDests, moduleMap) = parseInput input
+  putStrLn $ "Broadcast to: " ++ show broadcastDests
   putStrLn ""
-  putStrLn $ unlines $ show <$> modules
+  print moduleMap
 
-data Module = Module ModuleType String [String]
+data Module = FlipFlop State [String] | Conjunction [(String, Pulse)] [String] deriving (Show)
 
-data ModuleType = FlipFlop | Conjunction
+data State = On | Off deriving (Show)
 
-instance Show Module where
-  show (Module t name destinations) = show t ++ show name ++ " -> " ++ show destinations
+data Pulse = Low | High deriving (Show)
 
-instance Show ModuleType where
-  show FlipFlop = "%"
-  show Conjunction = "&"
+type RawModule = (Char, String, [String])
 
-parseInput :: String -> [Module]
-parseInput input = parseModule <$> lines input
+parseInput :: String -> ([String], Map String Module)
+parseInput input = case extractBroadcastDestinations $ parseToRawModules input of
+  (broadcastDests, rawModules) -> (broadcastDests, buildModuleMap rawModules)
+
+parseToRawModules :: String -> [RawModule]
+parseToRawModules input = parseModule <$> lines input
   where
     parseModule line = case split " -> " line of
-      ["broadcaster", ds] -> Module FlipFlop "broadcaster" (split ", " ds)
-      ['%':name, ds] -> Module FlipFlop name (split ", " ds)
-      ['&':name, ds] -> Module Conjunction name (split ", " ds)
+      ["broadcaster", ds] -> ('b', "broadcaster", split ", " ds)
+      [c:name, ds] -> (c, name, split ", " ds)
       _ -> error "Invalid module definition"
 
-extractBroadcaster :: [Module] -> (Module, [Module])
-extractBroadcaster modules = case find isBroadcaster modules of
-  Just broadcaster -> (broadcaster, filter (not . isBroadcaster) modules)
+extractBroadcastDestinations :: [RawModule] -> ([String], [RawModule])
+extractBroadcastDestinations modules = case find isBroadcaster modules of
+  Just (_, _, destinations) -> (destinations, filter (not . isBroadcaster) modules)
   Nothing -> error "No broadcaster module found"
   where
-    isBroadcaster (Module _ name _) = name == "broadcaster"
+    isBroadcaster (_, name, _) = name == "broadcaster"
 
+buildModuleMap :: [RawModule] -> Map String Module
+buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
+  where
+    nameModulePair ('%', name, ds) = (name, FlipFlop Off ds)
+    nameModulePair (_, name, ds) = (name, Conjunction (toLowPair <$> inputsOf name) ds)
+
+    toLowPair name = (name, Low)
+
+    inputsOf name = extractName <$> filter (\(_, _, ds) -> name `elem` ds) rawModules
+
+    extractName (_, name, _) = name
