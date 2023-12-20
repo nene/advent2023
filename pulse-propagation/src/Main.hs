@@ -1,21 +1,21 @@
 module Main (main) where
 import Data.List.Utils (split)
-import Data.Foldable (find)
 import Data.Map.Strict (Map, (!))
 import qualified Data.Map.Strict as Map
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  let (broadcastDests, moduleMap) = parseInput input
-  putStrLn $ "Broadcast to: " ++ show broadcastDests
-  putStrLn ""
+  let moduleMap = parseInput input
   print moduleMap
-  print $ process (moduleMap ! "a") ("broadcast", Low, "a")
+  print $ process (moduleMap ! "broadcaster") ("button", Low, "a")
 
 type ModuleMap = Map String Module
 
-data Module = FlipFlop State [String] | Conjunction [(String, Pulse)] [String] deriving (Show)
+data Module =
+    Broadcast [String]
+  | FlipFlop State [String]
+  | Conjunction [(String, Pulse)] [String] deriving (Show)
 
 data State = On | Off deriving (Show, Eq)
 
@@ -23,9 +23,8 @@ data Pulse = Low | High deriving (Show, Eq)
 
 type RawModule = (Char, String, [String])
 
-parseInput :: String -> ([String], Map String Module)
-parseInput input = case extractBroadcastDestinations $ parseToRawModules input of
-  (broadcastDests, rawModules) -> (broadcastDests, buildModuleMap rawModules)
+parseInput :: String -> ModuleMap
+parseInput input = buildModuleMap $ parseToRawModules input
 
 parseToRawModules :: String -> [RawModule]
 parseToRawModules input = parseModule <$> lines input
@@ -35,16 +34,10 @@ parseToRawModules input = parseModule <$> lines input
       [c:name, ds] -> (c, name, split ", " ds)
       _ -> error "Invalid module definition"
 
-extractBroadcastDestinations :: [RawModule] -> ([String], [RawModule])
-extractBroadcastDestinations modules = case find isBroadcaster modules of
-  Just (_, _, destinations) -> (destinations, filter (not . isBroadcaster) modules)
-  Nothing -> error "No broadcaster module found"
-  where
-    isBroadcaster (_, name, _) = name == "broadcaster"
-
 buildModuleMap :: [RawModule] -> ModuleMap
 buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
   where
+    nameModulePair ('b', name, ds) = (name, Broadcast ds)
     nameModulePair ('%', name, ds) = (name, FlipFlop Off ds)
     nameModulePair (_, name, ds) = (name, Conjunction (toLowPair <$> inputsOf name) ds)
 
@@ -61,6 +54,8 @@ buildModuleMap rawModules = Map.fromList $ nameModulePair <$> rawModules
 
 
 process :: Module -> (String, Pulse, String) -> (Module, [(String, Pulse, String)])
+-- When broadcast module receives a pulse, it sends the same pulse to all of its destination modules.
+process m@(Broadcast ds) (_, inPulse, to) = (m, [(to, inPulse, d) | d <- ds])
 -- If a flip-flop module receives a high pulse, it is ignored and nothing happens.
 process m@(FlipFlop _ _) (_, High, _) = (m, [])
 -- if a flip-flop module receives a low pulse, it flips between on and off.
