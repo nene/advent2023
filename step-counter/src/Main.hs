@@ -13,7 +13,11 @@ main = do
   print startCoord
   let n = 100
   putStrLn $ "After " ++ show n ++ " steps:"
-  print $ length $ stepN n startCoord gardenPlan
+  let counts = infiniteCounts startCoord gardenPlan
+  print $ counts !! n
+  print $ take (n+1) counts
+  print $ take n $ increments counts
+  print $ take (n-1) $ increments $ increments counts
 
 parseInput :: String -> (Vector2D Char, Coord2D)
 parseInput input = (cleanVector, startCoord)
@@ -23,7 +27,17 @@ parseInput input = (cleanVector, startCoord)
     rawVector = Vector2D.fromList $ lines input
 
 stepN :: Int -> Coord2D -> Vector2D Char -> [Coord2D]
-stepN n startCoord vector = iterate (`stepAll` vector) [startCoord] !! n
+stepN n startCoord vector = infiniteSteps startCoord vector !! n
+
+increments :: [Int] -> [Int]
+increments [] = []
+increments (x:xs) = zipWith (-) xs (x:xs)
+
+infiniteCounts :: Coord2D -> Vector2D Char -> [Int]
+infiniteCounts startCoord vector = length <$> infiniteSteps startCoord vector
+
+infiniteSteps :: Coord2D -> Vector2D Char -> [[Coord2D]]
+infiniteSteps startCoord vector = iterate (`stepAll` vector) [startCoord]
 
 stepAll :: [Coord2D] -> Vector2D Char -> [Coord2D]
 stepAll coords vector = uniq $ sort $ concatMap (`step` vector) coords
