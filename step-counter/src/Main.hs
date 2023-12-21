@@ -11,8 +11,9 @@ main = do
   input <- readFile "input.txt"
   let (gardenPlan, startCoord) = parseInput input
   print startCoord
-  putStrLn "After 64 steps:"
-  print $ length $ stepN 64 startCoord gardenPlan
+  let n = 100
+  putStrLn $ "After " ++ show n ++ " steps:"
+  print $ length $ stepN n startCoord gardenPlan
 
 parseInput :: String -> (Vector2D Char, Coord2D)
 parseInput input = (cleanVector, startCoord)
@@ -30,4 +31,9 @@ stepAll coords vector = uniq $ sort $ concatMap (`step` vector) coords
 step :: Coord2D -> Vector2D Char -> [Coord2D]
 step (x,y) vector = filter isEmptyPlot [(x+1,y), (x-1, y), (x,y+1), (x, y-1)]
   where
-    isEmptyPlot coord = vector `at` coord == Just '.'
+    isEmptyPlot coord = vector `infiniteAt` coord == Just '.'
+
+infiniteAt :: Vector2D a -> Coord2D -> Maybe a
+infiniteAt vector (x, y) = vector `at` (x `mod` sizeX, y `mod` sizeY)
+  where
+    (sizeX, sizeY) = Vector2D.size vector
