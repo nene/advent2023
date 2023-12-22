@@ -12,11 +12,8 @@ main = do
   input <- readFile "input.txt"
   let bricks = parseInput input
   let size = inputSize bricks
-  print bricks
-  print size
   let cube = initialCube size
-  print cube
-  putStrLn $ visualizeCube cube
+  putStrLn $ visualizeCube $ addAllBricks bricks cube
   putStrLn $ visualizeCube $ fallAllBricks bricks cube
 
 parseInput :: String -> [(Coord3D, Coord3D)]
@@ -41,7 +38,7 @@ visualizeCube vect = unlines $ foldl1 sideWays $ planeToStrings <$> planes
 
     intToChar 0 = '.'
     intToChar (-1) = '-'
-    intToChar _ = '#'
+    intToChar n = ['A'..'Z'] !! (n-1)
 
     planes :: [[[Int]]]
     planes = reverse <$> transpose (Vector3D.toList vect)
@@ -74,6 +71,9 @@ fallCoord :: Coord3D -> Vector3D Int -> Int
 fallCoord (x,y,z) cube = case find (\ x' -> cube `at` (x', y, z) /= Just 0) (reverse [0 .. x]) of
   Just newX -> newX + 1
   Nothing -> x
+
+addAllBricks :: [(Coord3D, Coord3D)] -> Vector3D Int -> Vector3D Int
+addAllBricks bricks cube = foldl (\c (b, i) -> addBrick b i c) cube $ zip bricks [1..]
 
 addBrick :: (Coord3D, Coord3D) -> Int -> Vector3D Int -> Vector3D Int
 addBrick brick = fillCoords (brickCoords brick)
