@@ -1,11 +1,11 @@
 module Main (main) where
 
-import Vector3D (Coord3D, Vector3D)
+import Vector3D (Coord3D, Vector3D, at)
 import qualified Vector3D
 import qualified Vector2D
 import Data.List.Utils (split)
 import Data.Vector ((//))
-import Data.List (transpose)
+import Data.List (transpose, find)
 
 main :: IO ()
 main = do
@@ -17,7 +17,7 @@ main = do
   let cube = initialCube size
   print cube
   putStrLn $ visualizeCube cube
-  putStrLn $ visualizeCube $ addBrick (head bricks) 1 cube
+  putStrLn $ visualizeCube $ fallAllBricks bricks cube
 
 parseInput :: String -> [(Coord3D, Coord3D)]
 parseInput input = parseLine <$> lines input
@@ -61,8 +61,25 @@ initialCube (x,y,z) = emptyCube // [(0, filledFloor)]
     emptyCube = Vector3D.fill (x,y,z) 0
     filledFloor = Vector2D.fill (y,z) (-1)
 
+fallAllBricks :: [(Coord3D, Coord3D)] -> Vector3D Int -> Vector3D Int
+fallAllBricks bricks cube = foldl (\cub (b, i) -> fallBrick b i cub) cube $ zip bricks [1..]
+
+fallBrick :: (Coord3D, Coord3D) -> Int -> Vector3D Int -> Vector3D Int
+fallBrick brick value cube = fillCoords newBrickCoords value cube
+  where
+    newBrickCoords = [(minX,y,z) | (_,y,z) <- brickCoords brick]
+    minX = maximum $ (`fallCoord` cube) <$> brickCoords brick
+
+fallCoord :: Coord3D -> Vector3D Int -> Int
+fallCoord (x,y,z) cube = case find (\ x' -> cube `at` (x', y, z) /= Just 0) (reverse [0 .. x]) of
+  Just newX -> newX + 1
+  Nothing -> x
+
 addBrick :: (Coord3D, Coord3D) -> Int -> Vector3D Int -> Vector3D Int
-addBrick brick value cube = foldl (\acc c -> Vector3D.setAt c value acc) cube $ brickCoords brick
+addBrick brick = fillCoords (brickCoords brick)
+
+fillCoords :: [Coord3D] -> Int -> Vector3D Int -> Vector3D Int
+fillCoords coords value cube = foldl (\acc c -> Vector3D.setAt c value acc) cube coords
 
 brickCoords :: (Coord3D, Coord3D) -> [Coord3D]
 brickCoords ((x,y,z), (x', y', z'))
