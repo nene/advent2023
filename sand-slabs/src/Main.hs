@@ -38,7 +38,7 @@ visualizeCube vect = unlines $ foldl1 sideWays $ planeToStrings <$> planes
 
     intToChar 0 = '.'
     intToChar (-1) = '-'
-    intToChar n = ['A'..'Z'] !! (n-1)
+    intToChar n = cycle ['A'..'Z'] !! (n-1)
 
     planes :: [[[Int]]]
     planes = reverse <$> transpose (Vector3D.toList vect)
