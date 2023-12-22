@@ -18,8 +18,8 @@ main = do
   putStrLn $ visualizeCube $ addAllBricks bricks cube
   let (resultCube, resultBricks) = fallAllBricks bricks cube
   putStrLn $ visualizeCube resultCube
-  print resultBricks
-  print $ zipWith (\br i -> isSupportingBrick br i resultBricks resultCube) resultBricks [1..]
+  putStrLn "Can be disintegrated:"
+  print $ length $ filter not $ zipWith (\br i -> isSupportingBrick br i resultBricks resultCube) resultBricks [1..]
 
 type RawBrick = (Coord3D, Coord3D)
 type Brick = [Coord3D]
@@ -106,9 +106,11 @@ range a b
   | otherwise = reverse [b..a]
 
 isSupportingBrick :: Brick -> Int -> [Brick] -> Vector3D Int -> Bool
-isSupportingBrick brick value allBricks cube = any (isOnlySupportedBy value) supportedBricks
+isSupportingBrick brick value allBricks cube = any isOnlySupportedBy supportedBricks
   where
-    isOnlySupportedBy v brickA = [Just v] == uniq (filter (==Just v) ((\c -> cube `at` below c) <$> brickA))
+    isOnlySupportedBy brickA = [value] == supportersOf brickA
+    supportersOf brickA = uniq $ sort $ filter (/=av) $ filter (/=0) $ (\c -> fromMaybe 0 $ cube `at` below c) <$> brickA
+      where av = fromMaybe 0 $ cube `at` head brickA
 
     supportedBricks = (\v -> allBricks !! (v-1)) <$> supportedBrickValues
     supportedBrickValues = uniq $ sort $ map (fromMaybe 0 . (cube `at`)) supportedCoords
