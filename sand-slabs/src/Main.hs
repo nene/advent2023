@@ -15,7 +15,9 @@ main = do
   let size = inputSize rawBricks
   let cube = initialCube size
   putStrLn $ visualizeCube $ addAllBricks bricks cube
-  putStrLn $ visualizeCube $ fallAllBricks bricks cube
+  let (resultCube, resultBricks) = fallAllBricks bricks cube
+  putStrLn $ visualizeCube resultCube
+  print resultBricks
 
 type RawBrick = (Coord3D, Coord3D)
 type Brick = [Coord3D]
@@ -61,11 +63,17 @@ initialCube (x,y,z) = emptyCube // [(0, filledFloor)]
     emptyCube = Vector3D.fill (x,y,z) 0
     filledFloor = Vector2D.fill (y,z) (-1)
 
-fallAllBricks :: [Brick] -> Vector3D Int -> Vector3D Int
-fallAllBricks bricks cube = foldl (\cub (b, i) -> fallBrick b i cub) cube $ zip bricks [1..]
+fallAllBricks :: [Brick] -> Vector3D Int -> (Vector3D Int, [Brick])
+fallAllBricks bricks cube = (resultCube, reverse resultBricks)
+  where
+    (resultCube, resultBricks) = foldl fall (cube, []) $ zip bricks [1..]
+    fall (oldCube, newBricks) (brick, i) = (newCube, newBrick : newBricks)
+      where
+        newCube = fillCoords newBrick i oldCube
+        newBrick = fallBrick brick oldCube
 
-fallBrick :: Brick -> Int -> Vector3D Int -> Vector3D Int
-fallBrick brick value cube = fillCoords newBrick value cube
+fallBrick :: Brick -> Vector3D Int -> Brick
+fallBrick brick cube = newBrick
   where
     newBrick = translateX (minNewX - minOldX) brick
     translateX dx = map (\(x,y,z) -> (x+dx,y,z))
