@@ -64,8 +64,11 @@ fallAllBricks bricks cube = foldl (\cub (b, i) -> fallBrick b i cub) cube $ zip 
 fallBrick :: (Coord3D, Coord3D) -> Int -> Vector3D Int -> Vector3D Int
 fallBrick brick value cube = fillCoords newBrickCoords value cube
   where
-    newBrickCoords = [(minX,y,z) | (_,y,z) <- brickCoords brick]
-    minX = maximum $ (`fallCoord` cube) <$> brickCoords brick
+    newBrickCoords = translateX (minNewX - minOldX) coords
+    translateX dx = map (\(x,y,z) -> (x+dx,y,z))
+    minNewX = maximum $ (`fallCoord` cube) <$> coords
+    minOldX = minimum $ Vector3D.coord3DX <$> coords
+    coords = brickCoords brick
 
 fallCoord :: Coord3D -> Vector3D Int -> Int
 fallCoord (x,y,z) cube = case find (\ x' -> cube `at` (x', y, z) /= Just 0) (reverse [0 .. x]) of
