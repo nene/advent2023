@@ -17,6 +17,7 @@ main = do
   let cube = initialCube size
   print cube
   putStrLn $ visualizeCube cube
+  putStrLn $ visualizeCube $ addBrick (head bricks) 1 cube
 
 parseInput :: String -> [(Coord3D, Coord3D)]
 parseInput input = parseLine <$> lines input
@@ -60,3 +61,17 @@ initialCube (x,y,z) = emptyCube // [(0, filledFloor)]
     emptyCube = Vector3D.fill (x,y,z) 0
     filledFloor = Vector2D.fill (y,z) (-1)
 
+addBrick :: (Coord3D, Coord3D) -> Int -> Vector3D Int -> Vector3D Int
+addBrick brick value cube = foldl (\acc c -> Vector3D.setAt c value acc) cube $ brickCoords brick
+
+brickCoords :: (Coord3D, Coord3D) -> [Coord3D]
+brickCoords ((x,y,z), (x', y', z'))
+  | x /= x' = [(x2,y,z) | x2 <- range x x']
+  | y /= y' = [(x,y2,z) | y2 <- range y y']
+  | z /= z' = [(x,y,z2) | z2 <- range z z']
+  | otherwise = [(x, y, z)]
+
+range :: Int -> Int -> [Int]
+range a b
+  | a < b = [a..b]
+  | otherwise = reverse [b..a]
