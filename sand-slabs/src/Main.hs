@@ -5,6 +5,7 @@ import qualified Vector3D
 import qualified Vector2D
 import Data.List.Utils (split)
 import Data.Vector ((//))
+import Data.List (transpose)
 
 main :: IO ()
 main = do
@@ -15,6 +16,7 @@ main = do
   print size
   let cube = initialCube size
   print cube
+  putStrLn $ visualizeCube cube
 
 parseInput :: String -> [(Coord3D, Coord3D)]
 parseInput input = parseLine <$> lines input
@@ -26,6 +28,23 @@ parseInput input = parseLine <$> lines input
     parseCoord txt = case split "," txt of
       [z,y,x] -> (read x, read y, read z)
       _ -> error "Invalid coordinate"
+
+visualizeCube :: Vector3D Int -> String
+visualizeCube vect = unlines $ foldl1 sideWays $ planeToStrings <$> planes
+  where
+    sideWays :: [String] -> [String] -> [String]
+    sideWays = zipWith (\x y -> x ++ " " ++ y)
+
+    planeToStrings :: [[Int]] -> [String]
+    planeToStrings plane = map intToChar <$> plane
+
+    intToChar 0 = '.'
+    intToChar (-1) = '-'
+    intToChar _ = '#'
+
+    planes :: [[[Int]]]
+    planes = reverse <$> transpose (Vector3D.toList vect)
+
 
 inputSize :: [(Coord3D, Coord3D)] -> Coord3D
 inputSize pairs = (x+1, y+1, z+1)
@@ -40,3 +59,4 @@ initialCube (x,y,z) = emptyCube // [(0, filledFloor)]
   where
     emptyCube = Vector3D.fill (x,y,z) 0
     filledFloor = Vector2D.fill (y,z) (-1)
+
