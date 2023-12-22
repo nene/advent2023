@@ -1,4 +1,19 @@
-module Vector3D (Vector3D, Coord3D, fromList, toList, at, setAt, updateAt, size, Vector3D.map, findCoord, fill) where
+module Vector3D (
+  Vector3D,
+  Coord3D,
+  fromList,
+  toList,
+  at,
+  setAt,
+  updateAt,
+  size,
+  Vector3D.map,
+  findCoord,
+  fill,
+  coord3DX,
+  coord3DY,
+  coord3DZ
+) where
 
 import Data.Vector (Vector, (!?), (//))
 import qualified Data.Vector as Vector
@@ -58,3 +73,12 @@ findCoord fn vect = do
 -- creates 3D vector filled with some value
 fill :: Coord3D -> a -> Vector3D a
 fill (xCount, yCount, zCount) v = Vector.replicate xCount $ Vector2D.fill (yCount, zCount) v
+
+coord3DX :: Coord3D -> Int
+coord3DX (x, _, _) = x
+
+coord3DY :: Coord3D -> Int
+coord3DY (_, y, _) = y
+
+coord3DZ :: Coord3D -> Int
+coord3DZ (_, _, z) = z
