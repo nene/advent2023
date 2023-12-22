@@ -1,13 +1,14 @@
 module Main (main) where
 
+import Vector3D (Coord3D)
+import qualified Vector3D
 import Data.List.Utils (split)
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  print $ parseInput input
-
-type Coord3D = (Int, Int, Int)
+  let bricks = parseInput input
+  print bricks
 
 parseInput :: String -> [(Coord3D, Coord3D)]
 parseInput input = parseLine <$> lines input
