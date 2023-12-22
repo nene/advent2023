@@ -3,9 +3,10 @@ module Main (main) where
 import Vector3D (Coord3D, Vector3D, at)
 import qualified Vector3D
 import qualified Vector2D
-import Data.List.Utils (split)
+import Data.List.Utils (split, uniq)
 import Data.Vector ((//))
-import Data.List (transpose, find)
+import Data.List (transpose, find, sort)
+import Data.Maybe (fromMaybe)
 
 main :: IO ()
 main = do
@@ -18,6 +19,7 @@ main = do
   let (resultCube, resultBricks) = fallAllBricks bricks cube
   putStrLn $ visualizeCube resultCube
   print resultBricks
+  print $ zipWith (\br i -> isSupportingBrick br i resultBricks resultCube) resultBricks [1..]
 
 type RawBrick = (Coord3D, Coord3D)
 type Brick = [Coord3D]
@@ -102,3 +104,22 @@ range :: Int -> Int -> [Int]
 range a b
   | a < b = [a..b]
   | otherwise = reverse [b..a]
+
+isSupportingBrick :: Brick -> Int -> [Brick] -> Vector3D Int -> Bool
+isSupportingBrick brick value allBricks cube = any (isOnlySupportedBy value) supportedBricks
+  where
+    isOnlySupportedBy v brickA = [Just v] == uniq (filter (==Just v) ((\c -> cube `at` below c) <$> brickA))
+
+    supportedBricks = (\v -> allBricks !! (v-1)) <$> supportedBrickValues
+    supportedBrickValues = uniq $ sort $ map (fromMaybe 0 . (cube `at`)) supportedCoords
+    supportedCoords = above <$> filter isSupportingCoord brick
+    isSupportingCoord coord = supports coord cube /= value && supports coord cube /= 0
+
+supports :: Coord3D -> Vector3D Int -> Int
+supports coord cube = fromMaybe 0 (cube `at` above coord)
+
+above :: Coord3D -> Coord3D
+above (x,y,z) = (x+1, y, z)
+
+below :: Coord3D -> Coord3D
+below (x,y,z) = (x-1, y, z)
