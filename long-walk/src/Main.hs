@@ -37,10 +37,10 @@ possibleSteps coord hmap = map snd $ filter (isValidStep hmap) $ possibleDirecti
 isValidStep :: Vector2D Char -> (Dir, Coord2D) -> Bool
 isValidStep hmap (dir, coord) = case (hmap `at` coord, dir) of
   (Just '.', _) -> True
-  (Just '>', R) -> True
-  (Just '<', L) -> True
-  (Just '^', U) -> True
-  (Just 'v', D) -> True
+  (Just '>', _) -> True
+  (Just '<', _) -> True
+  (Just '^', _) -> True
+  (Just 'v', _) -> True
   _ -> False
 
 data Dir = L | R | U | D deriving (Show, Eq)
