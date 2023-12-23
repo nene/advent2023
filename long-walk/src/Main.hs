@@ -12,7 +12,7 @@ main = do
   let hikeMap = parseInput input
   let start = startCoord hikeMap
   let finish = finishCoord hikeMap
-  let allWalks = walk start finish 0 hikeMap
+  let allWalks = take 40000 $ walk start finish 0 hikeMap
   let (maxLen, longestWalkMap) = maximumBy (\a b -> compare (fst a) (fst b)) allWalks
   print maxLen
   putStrLn $ showMap longestWalkMap
