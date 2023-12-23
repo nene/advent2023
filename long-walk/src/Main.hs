@@ -2,6 +2,7 @@ module Main (main) where
 
 import Vector2D (Vector2D, Coord2D, at)
 import qualified Vector2D
+import qualified Data.Vector as Vector
 import Data.Maybe (fromMaybe)
 import Data.Foldable (maximumBy)
 
@@ -10,7 +11,8 @@ main = do
   input <- readFile "input.txt"
   let hikeMap = parseInput input
   let start = startCoord hikeMap
-  let allWalks = walk start 0 hikeMap
+  let finish = finishCoord hikeMap
+  let allWalks = walk start finish 0 hikeMap
   let (maxLen, longestWalkMap) = maximumBy (\a b -> compare (fst a) (fst b)) allWalks
   print maxLen
   putStrLn $ showMap longestWalkMap
@@ -24,12 +26,18 @@ showMap = unlines . Vector2D.toList
 startCoord :: Vector2D Char -> Coord2D
 startCoord vector = fromMaybe (0,0) $ Vector2D.findCoord (== '.') vector
 
-walk :: Coord2D -> Int -> Vector2D Char -> [(Int, Vector2D Char)]
-walk coord n hikeMap = case possibleSteps coord hikeMap' of
-    [] -> [(n, hikeMap')]
-    coords -> concatMap (\c -> walk c (n+1) hikeMap') coords
+finishCoord :: Vector2D Char -> Coord2D
+finishCoord vector = (height-1, x)
   where
-    hikeMap' = Vector2D.setAt coord 'O' hikeMap
+    x = fromMaybe 0 $ Vector.findIndex (== '.') $ Vector.last vector
+    (height, _width) = Vector2D.size vector
+
+walk :: Coord2D -> Coord2D -> Int -> Vector2D Char -> [(Int, Vector2D Char)]
+walk start finish n hikeMap = case possibleSteps start hikeMap' of
+    [] -> [(n, hikeMap') | start == finish]
+    coords -> concatMap (\c -> walk c finish (n+1) hikeMap') coords
+  where
+    hikeMap' = Vector2D.setAt start 'O' hikeMap
 
 possibleSteps :: Coord2D -> Vector2D Char -> [Coord2D]
 possibleSteps coord hmap = map snd $ filter (isValidStep hmap) $ possibleDirections coord
