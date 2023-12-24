@@ -1,6 +1,8 @@
 module Main (main) where
+import System.Environment (getArgs)
 
 main :: IO ()
 main = do
-  input <- readFile "input.txt"
+  [fileName] <- getArgs
+  input <- readFile fileName
   print input
