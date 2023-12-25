@@ -2,6 +2,7 @@ module Main (main) where
 
 import System.Environment (getArgs)
 import Data.List.Utils (split)
+import Data.Maybe (isJust)
 
 type Point2D = (Double, Double)
 
@@ -10,7 +11,10 @@ main = do
   [fileName] <- getArgs
   input <- readFile fileName
   let paths = parseInput input
-  print $ [a `intersectInFuture` b | (a,b) <- pairs paths]
+  let area = ((7, 7), (27, 27))
+  let intersections = [validIntersect area a b | (a,b) <- pairs paths]
+  print intersections
+  print $ length $ filter isJust intersections
 
 pairs :: [a] -> [(a, a)]
 pairs [] = []
@@ -28,11 +32,22 @@ parseInput input = parseLine <$> lines input
       [x,y,_z] -> (read x, read y)
       _ -> error "Invalid input"
 
-intersectInFuture :: (Point2D, Point2D) -> (Point2D, Point2D) -> Maybe Point2D
-intersectInFuture path1 path2 = do
+validIntersect :: (Point2D, Point2D) -> (Point2D, Point2D) -> (Point2D, Point2D) -> Maybe Point2D
+validIntersect area path1 path2 = do
   point <- maybeIntersect path1 path2
-  return point
-  -- if isInFuture point path1 && isInFuture point path2 then Just point else Nothing
+  if isInFuture point path1 && isInFuture point path2 && isInArea area point
+  then 
+    Just point
+  else
+    Nothing
+
+isInFuture :: Point2D -> (Point2D, Point2D) -> Bool
+isInFuture (x,_y) ((x1, _y1), (vx, _vy))
+  | vx > 0 = x > x1
+  | otherwise = x <= x1
+
+isInArea :: (Point2D, Point2D) -> Point2D -> Bool
+isInArea ((x1,y1), (x2,y2)) (x, y) = x2 >= x && x >= x1 && y2 >= y && y >= y1
 
 maybeIntersect :: (Point2D, Point2D) -> (Point2D, Point2D) -> Maybe Point2D
 maybeIntersect path1 path2 = if isInfinite x || isInfinite y then Nothing else Just (x, y)
