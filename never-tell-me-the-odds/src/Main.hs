@@ -3,7 +3,7 @@ module Main (main) where
 import System.Environment (getArgs)
 import Data.List.Utils (split)
 
-type Point3D = (Double, Double, Double)
+type Point2D = (Double, Double)
 
 main :: IO ()
 main = do
@@ -13,17 +13,19 @@ main = do
   print pairs
   let (p, v) = head pairs
   print $ deriveLineEq p v
+  print $ uncurry deriveLineEq <$> pairs
+  print $ intersect (head pairs) (pairs !! 1)
 
 -- 19, 13, 30 @ -2,  1, -2
-parseInput :: String -> [(Point3D, Point3D)]
+parseInput :: String -> [(Point2D, Point2D)]
 parseInput input = parseLine <$> lines input
   where
     parseLine ln = case split " @ " ln of
       [p, v] -> (parseCoord p, parseCoord v)
       _ -> error "Invalid input"
-    
+
     parseCoord txt = case split ", " txt of
-      [x,y,z] -> (read x, read y, read z)
+      [x,y,_z] -> (read x, read y)
       _ -> error "Invalid input"
 
 -- A: px:19, py:13 @ vx:-2, vy:1
@@ -57,11 +59,34 @@ parseInput input = parseLine <$> lines input
 --
 -- y = mx + b
 
-deriveLineEq :: Point3D -> Point3D -> String
-deriveLineEq (x1, y1, _) (vx, vy, _) = show m ++ "*x + " ++ show b
+deriveLineEq :: Point2D -> Point2D -> String
+deriveLineEq (x1, y1) (vx, vy) = show m ++ "*x + " ++ show b
   where
     b = y1 - m * x1
     m = vy / vx
+
+deriveLineY :: Point2D -> Point2D -> Double -> Double
+deriveLineY (x1, y1) (vx, vy) x = m * x + b
+  where
+    b = y1 - m * x1
+    m = vy / vx
+
+-- m1*x + b1 = m2*x + b2
+-- m1*x - m2*x = b2 - b1
+-- (m1-m2)*x = b2 - b1
+-- x = (b2 - b1) / (m1 - m2)
+
+intersect :: (Point2D, Point2D) -> (Point2D, Point2D) -> Point2D
+intersect ((x1,y1), (vx1,vy1)) ((x2,y2), (vx2,vy2)) = (x, y)
+  where
+    y = m1 * x + b1
+    x = (b2 - b1) / (m1 - m2)
+    b1 = y1 - m1 * x1
+    m1 = vy1 / vx1
+    b2 = y2 - m2 * x2
+    m2 = vy2 / vx2
+
+
 
 -- |
 --20                  
