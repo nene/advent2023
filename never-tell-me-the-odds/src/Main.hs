@@ -11,7 +11,7 @@ main = do
   [fileName] <- getArgs
   input <- readFile fileName
   let paths = parseInput input
-  let area = ((7, 7), (27, 27))
+  let area = ((200000000000000, 200000000000000), (400000000000000, 400000000000000))
   let intersections = [validIntersect area a b | (a,b) <- pairs paths]
   print intersections
   print $ length $ filter isJust intersections
